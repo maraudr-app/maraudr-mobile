@@ -14,25 +14,53 @@ class _GeoScreenState extends State<GeoScreen> {
   Position? _position;
   bool _loading = false;
 
-  Future<void> _getLocation() async {
-    setState(() => _loading = true);
+  Future<void> _checkAndRequestPermission() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La localisation est désactivée')),
+        const SnackBar(content: Text('La localisation est désactivée.')),
       );
       return;
     }
 
     LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission != LocationPermission.whileInUse && permission != LocationPermission.always) {
+      if (!mounted) return;
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Permission refusée.')),
+        );
         return;
       }
     }
 
-    final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    if (permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Permission refusée définitivement. Activez-la dans les réglages.')),
+      );
+      return;
+    }
+
+    await _getLocation();
+  }
+
+  Future<void> _getLocation() async {
+    setState(() => _loading = true);
+
+    Position? pos;
+    try {
+      pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur de localisation : ${e.toString()}')),
+      );
+    }
+
+    if (!mounted) return;
     setState(() {
       _position = pos;
       _loading = false;
@@ -43,7 +71,7 @@ class _GeoScreenState extends State<GeoScreen> {
     if (_position == null) return;
 
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8000'));
-    final storage = const FlutterSecureStorage();
+    const storage = FlutterSecureStorage();
     final token = await storage.read(key: 'jwt_token');
 
     try {
@@ -56,10 +84,12 @@ class _GeoScreenState extends State<GeoScreen> {
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Position envoyée (status: ${response.statusCode})')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur d\'envoi : ${e.toString()}')),
       );
@@ -69,7 +99,7 @@ class _GeoScreenState extends State<GeoScreen> {
   @override
   void initState() {
     super.initState();
-    _getLocation();
+    _checkAndRequestPermission();
   }
 
   @override
@@ -97,7 +127,7 @@ class _GeoScreenState extends State<GeoScreen> {
               ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: _getLocation,
+              onPressed: _checkAndRequestPermission,
               icon: const Icon(Icons.refresh),
               label: const Text('Rafraîchir'),
             ),

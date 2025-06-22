@@ -45,5 +45,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+    <string>Cette application utilise votre position pour localiser des zones de maraude.</string>
+
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>Votre position peut être utilisée même en arrière-plan pour vous assister dans vos maraudes.</string>
 </dict>
 </plist>

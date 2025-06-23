@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'core/router.dart';
-import 'core/theme.dart';
+import 'package:maraudr_app/core/theme.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/data/auth_repository.dart';
+import 'core/router.dart';
 
 void main() {
   runApp(MaraudrApp());
@@ -27,12 +27,7 @@ class MaraudrApp extends StatelessWidget {
             create: (_) => AuthBloc(_authRepository)..add(AuthCheckRequested()),
           ),
         ],
-        child: MaterialApp.router(
-          theme: lightTheme,
-          darkTheme: darkTheme,
-          routerConfig: goRouter,
-          debugShowCheckedModeBanner: false,
-        ),
+        child: const AppRouter(),
       ),
     );
   }

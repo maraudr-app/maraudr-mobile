@@ -28,14 +28,12 @@ class HomeScreen extends StatelessWidget {
                 if (state is AssociationSelectorLoading) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (state is AssociationSelectorLoaded) {
-                  // Ensure there's a selected ID and associations list is not empty
                   if (state.selectedId == null || state.associations.isEmpty) {
-                    return const SizedBox.shrink(); // Or show an error/message
+                    return const SizedBox.shrink();
                   }
 
                   return DropdownButton<String>(
                     isExpanded: true,
-                    // Now, state.selectedId should always be non-null if associations exist
                     value: state.selectedId,
                     hint: const Text("Sélectionnez une association"),
                     items: state.associations.map((assoc) {
@@ -46,7 +44,9 @@ class HomeScreen extends StatelessWidget {
                     }).toList(),
                     onChanged: (value) {
                       if (value != null) {
-                        context.read<AssociationSelectorBloc>().add(SelectAssociation(value));
+                        context
+                            .read<AssociationSelectorBloc>()
+                            .add(SelectAssociation(value));
                       }
                     },
                   );
@@ -70,11 +70,15 @@ class HomeScreen extends StatelessWidget {
             ),
             const Spacer(),
             ElevatedButton.icon(
-              onPressed: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
-              icon: const Icon(Icons.logout),
-              label: const Text('Se déconnecter'),
+              onPressed: () =>
+                  context.read<AuthBloc>().add(AuthLogoutRequested()),
+              icon: const Icon(Icons.logout, color: Colors.black),
+              label: const Text(
+                'Se déconnecter',
+                style: TextStyle(color: Colors.black),
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: Colors.redAccent,
                 minimumSize: const Size(double.infinity, 48),
               ),
             ),

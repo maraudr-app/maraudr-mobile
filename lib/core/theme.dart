@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 final ThemeData lightTheme = ThemeData(
   useMaterial3: true,
   brightness: Brightness.light,
-  colorSchemeSeed: Colors.blue,
+  colorSchemeSeed: Colors.blueAccent,
 );
 
 final ThemeData darkTheme = ThemeData(
   useMaterial3: true,
   brightness: Brightness.dark,
-  colorSchemeSeed: Colors.orange,
+  colorSchemeSeed: Colors.white,
 );

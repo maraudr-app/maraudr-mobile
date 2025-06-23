@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../association/bloc/association_selector_bloc.dart';
 
 class GeoScreen extends StatefulWidget {
   const GeoScreen({super.key});
@@ -70,18 +73,28 @@ class _GeoScreenState extends State<GeoScreen> {
   Future<void> _sendLocation() async {
     if (_position == null) return;
 
-    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8000'));
+    final dio = Dio(BaseOptions(baseUrl: 'http://10.66.125.76:8084'));
     const storage = FlutterSecureStorage();
     final token = await storage.read(key: 'jwt_token');
 
     try {
+      final associationId = await AssociationSelectorBloc.getSelectedAssociationId();
+      if (associationId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Aucune association sélectionnée.')),
+        );
+        return;
+      }
+
       final response = await dio.post(
         '/geo/locations',
         data: {
           'latitude': _position!.latitude,
           'longitude': _position!.longitude,
+          'associationId': associationId,
           'description': 'Emplacement signalé depuis l\'app'
         },
+
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       if (!mounted) return;
@@ -105,7 +118,13 @@ class _GeoScreenState extends State<GeoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Localisation')),
+      appBar: AppBar(
+        title: const Text('Localisation'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/home'),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

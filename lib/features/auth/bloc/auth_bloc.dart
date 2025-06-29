@@ -7,8 +7,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository authRepository;
 
   AuthBloc(this.authRepository) : super(AuthInitial()) {
+
     on<AuthCheckRequested>((event, emit) async {
       final token = await authRepository.getToken();
+      print('📦 AuthCheckRequested → token: $token');
       if (token != null) {
         emit(Authenticated(token));
       } else {
@@ -20,12 +22,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthLoading());
       try {
         final token = await authRepository.login(event.email, event.password);
+        print('🟢 État Authenticated émis');
         emit(Authenticated(token));
       } catch (e) {
+        print('🔴 AuthFailure émis : $e');
         emit(AuthFailure(e.toString()));
         emit(Unauthenticated());
       }
     });
+
 
     on<AuthLogoutRequested>((event, emit) async {
       await authRepository.clearToken();

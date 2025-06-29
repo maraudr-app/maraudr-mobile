@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maraudr_app/config.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -7,16 +8,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:maraudr_app/features/association/bloc/association_selector_bloc.dart';
 import 'package:maraudr_app/features/association/bloc/association_selector_state.dart';
 
-import '../../../config.dart';
-
-class StockScreen extends StatefulWidget {
-  const StockScreen({super.key});
+class RemoveStockScreen extends StatefulWidget {
+  const RemoveStockScreen({super.key});
 
   @override
-  State<StockScreen> createState() => _StockScreenState();
+  State<RemoveStockScreen> createState() => _ReduceStockScreenState();
 }
 
-class _StockScreenState extends State<StockScreen> {
+class _ReduceStockScreenState extends State<RemoveStockScreen> {
   String? _lastCode;
   bool _sending = false;
 
@@ -42,8 +41,8 @@ class _StockScreenState extends State<StockScreen> {
     final dio = Dio(BaseOptions(baseUrl: AppConfig.baseUrlStock));
 
     try {
-      await dio.post(
-        '/item/$code',
+      await dio.put(
+        '/item/reduce/$code',
         data: {
           'associationId': associationId,
         },
@@ -52,12 +51,12 @@ class _StockScreenState extends State<StockScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Item ajouté au stock'),
+          content: Text('Quantité réduite avec succès'),
           backgroundColor: Colors.green,
         ),
       );
     } on DioException catch (e) {
-      String message = "Cet item est invalide ou n'est pas reconnu.";
+      String message = "Erreur lors de la réduction de stock.";
       if (e.response?.data is Map && e.response?.data['message'] != null) {
         message = e.response?.data['message'];
       }
@@ -73,12 +72,11 @@ class _StockScreenState extends State<StockScreen> {
     setState(() => _sending = false);
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scanner un article'),
+        title: const Text('Enlever un item du stock'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/home'),

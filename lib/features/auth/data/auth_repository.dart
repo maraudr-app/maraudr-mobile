@@ -1,9 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:maraudr_app/config.dart';
 
 class AuthRepository {
   final Dio _dio = Dio(
-    BaseOptions(baseUrl: 'http://10.66.125.76:8082'),
+    BaseOptions(baseUrl: AppConfig.baseUrlAuth),
   );
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
@@ -24,6 +25,8 @@ class AuthRepository {
 
   Future<String> login(String email, String password) async {
     try {
+      print('🔐 Tentative de login avec $email');
+
       final response = await _dio.post(
         '/api/auth',
         data: {
@@ -35,15 +38,18 @@ class AuthRepository {
         ),
       );
 
+      print('✅ Réponse reçue: ${response.data}');
+
       final token = response.data['accessToken'];
       if (token != null) {
         await saveToken(token);
+        print('💾 Token sauvegardé');
         return token;
       } else {
         throw Exception("Token non trouvé dans la réponse.");
       }
     } on DioException catch (e) {
-      print(e.response?.data ?? e.message);
+      print('❌ Erreur Dio : ${e.response?.data ?? e.message}');
       throw Exception("Erreur de connexion : ${e.response?.data ?? e.message}");
     }
   }

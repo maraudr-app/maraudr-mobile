@@ -1,11 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_map/flutter_map.dart'; // Import flutter_map
-import 'package:latlong2/latlong.dart'; // Import latlong2 for LatLng
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:maraudr_app/config.dart';
 
 import '../../association/bloc/association_selector_bloc.dart';
 import '../../association/bloc/association_selector_state.dart';
@@ -19,12 +22,13 @@ class GeoScreen extends StatefulWidget {
 
 class _GeoScreenState extends State<GeoScreen> {
   Position? _position;
-  bool _loading = false; // For fetching location
-  bool _sending = false; // For sending location data to backend
+  bool _loading = false;
+  bool _sending = false;
   final TextEditingController _descriptionController = TextEditingController();
   static const int _maxDescriptionLength = 300;
+  final MapController _mapController = MapController();
 
-  final MapController _mapController = MapController(); // Controller for flutter_map
+  Timer? _timeoutTimer;
 
   @override
   void initState() {
@@ -34,14 +38,15 @@ class _GeoScreenState extends State<GeoScreen> {
 
   @override
   void dispose() {
+    _timeoutTimer?.cancel();
     _descriptionController.dispose();
     super.dispose();
   }
 
   Future<void> _checkAndRequestPermission() async {
     setState(() {
-      _loading = true; // Set loading state when checking/requesting permission
-      _position = null; // Clear previous position
+      _loading = true;
+      _position = null;
     });
 
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -71,8 +76,7 @@ class _GeoScreenState extends State<GeoScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text(
-                'Permission refusée définitivement. Activez-la dans les réglages.')),
+            content: Text('Permission refusée définitivement. Activez-la dans les réglages.')),
       );
       setState(() => _loading = false);
       return;
@@ -82,44 +86,64 @@ class _GeoScreenState extends State<GeoScreen> {
   }
 
   Future<void> _getLocation() async {
-    Position? pos;
+    _timeoutTimer?.cancel(); // just in case
+    _timeoutTimer = Timer(const Duration(seconds: 10), () {
+      if (_position == null && mounted) {
+        setState(() {
+          _loading = false;
+        });
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Localisation impossible'),
+            content: const Text(
+                'Impossible de récupérer votre position.\nVous allez être redirigé vers le menu.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.go('/home');
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+
     try {
-      pos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
+      Position pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      _timeoutTimer?.cancel();
+
+      if (!mounted) return;
+      setState(() {
+        _position = pos;
+        _loading = false;
+      });
+
+      _mapController.move(
+        LatLng(_position!.latitude, _position!.longitude),
+        15.0,
+      );
     } catch (e) {
       if (!mounted) return;
+      _timeoutTimer?.cancel();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur de localisation : ${e.toString()}')),
+        SnackBar(content: Text('Erreur de localisation : $e')),
       );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _position = pos;
-          _loading = false; // Set loading to false regardless of success
-        });
-        if (_position != null) {
-          _mapController.move(
-            LatLng(_position!.latitude, _position!.longitude),
-            15.0, // Zoom level adjusted for better visibility of a local area
-          );
-        }
-      }
+      setState(() => _loading = false);
     }
   }
 
   Future<void> _sendLocation() async {
-    if (_position == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aucune position disponible à envoyer.')),
-      );
-      return;
-    }
-
-    if (_sending) return; // Prevent multiple taps
+    if (_position == null || _sending) return;
 
     setState(() => _sending = true);
 
-    final dio = Dio(BaseOptions(baseUrl: 'http://10.66.125.76:8084'));
+    final dio = Dio(BaseOptions(baseUrl: AppConfig.baseUrlGeo));
     const storage = FlutterSecureStorage();
     final token = await storage.read(key: 'jwt_token');
 
@@ -149,45 +173,31 @@ class _GeoScreenState extends State<GeoScreen> {
           'associationId': associationId,
           'latitude': _position!.latitude,
           'longitude': _position!.longitude,
-          'notes': description.isNotEmpty ? description : 'Emplacement signalé depuis l\'app',
+          'notes': description.isNotEmpty ? description : 'Signalement depuis l\'app',
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Position envoyée (status: ${response.statusCode})')),
+        SnackBar(content: Text('Position envoyée (status: ${response.statusCode})')),
       );
       _descriptionController.clear();
-    } on DioException catch (e) {
-      if (!mounted) return;
-      String message = 'Erreur d\'envoi: ${e.message}';
-      if (e.response?.data is Map && e.response?.data['message'] != null) {
-        message = e.response?.data['message'];
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur inattendue: ${e.toString()}')),
+        SnackBar(content: Text('Erreur d\'envoi : $e')),
       );
     } finally {
-      if (mounted) {
-        setState(() => _sending = false);
-      }
+      if (mounted) setState(() => _sending = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Default camera position if _position is null (e.g., initial load)
-    // Using Paris, France coordinates as a sensible default since you're in France
     final initialCenter = _position != null
         ? LatLng(_position!.latitude, _position!.longitude)
-        : const LatLng(48.8566, 2.3522); // Default to Paris, France
+        : const LatLng(48.8566, 2.3522); // Paris
 
     final bool showOverallLoading = _loading || _sending;
 
@@ -204,7 +214,6 @@ class _GeoScreenState extends State<GeoScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Map Section
             Container(
               height: 250,
               decoration: BoxDecoration(
@@ -212,18 +221,16 @@ class _GeoScreenState extends State<GeoScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: showOverallLoading
-                  ? const Center(child: CircularProgressIndicator()) // Spinner for map area
+                  ? const Center(child: CircularProgressIndicator())
                   : _position == null
-                  ? const Center(child: Text('Impossible d\'afficher la carte sans position.'))
+                  ? const Center(child: Text('Position indisponible.'))
                   : FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter: initialCenter,
-                  initialZoom: 15.0, // Zoom level on map initialization
-                  maxZoom: 18.0,
-                  minZoom: 2.0,
+                  initialZoom: 15.0,
                   interactionOptions: const InteractionOptions(
-                    flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+                    flags: InteractiveFlag.none,
                   ),
                 ),
                 children: [
@@ -231,51 +238,37 @@ class _GeoScreenState extends State<GeoScreen> {
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.yourcompany.maraudr_app',
                   ),
-                  if (_position != null)
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: LatLng(_position!.latitude, _position!.longitude),
-                          width: 80,
-                          height: 80,
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Colors.red,
-                            size: 40,
-                          ),
-                        ),
-                      ],
-                    ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: initialCenter,
+                        width: 80,
+                        height: 80,
+                        child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-
-            // Main content section (position details, description, buttons)
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Votre position actuelle:',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                    Text('Votre position actuelle:', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 10),
-                    // Show position or a loading/unavailable message
                     if (showOverallLoading)
                       const Center(child: CircularProgressIndicator())
                     else if (_position != null) ...[
-                      Text('Latitude : ${_position!.latitude}', style: Theme.of(context).textTheme.bodyLarge),
-                      Text('Longitude : ${_position!.longitude}', style: Theme.of(context).textTheme.bodyLarge),
+                      Text('Latitude : ${_position!.latitude}'),
+                      Text('Longitude : ${_position!.longitude}'),
                     ] else ...[
                       const Text('Position non disponible.', style: TextStyle(fontStyle: FontStyle.italic)),
                     ],
                     const SizedBox(height: 30),
-                    Text(
-                      'Ajouter une description (optionnel):',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                    Text('Ajouter une description (optionnel):', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 10),
                     TextField(
                       controller: _descriptionController,
@@ -283,9 +276,7 @@ class _GeoScreenState extends State<GeoScreen> {
                       maxLength: _maxDescriptionLength,
                       decoration: InputDecoration(
                         hintText: 'Ex: "Bénévole rencontré à ce point"',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         contentPadding: const EdgeInsets.all(12),
                       ),
                       keyboardType: TextInputType.multiline,
@@ -298,9 +289,7 @@ class _GeoScreenState extends State<GeoScreen> {
                       label: const Text('Envoyer la localisation'),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ],
@@ -308,16 +297,13 @@ class _GeoScreenState extends State<GeoScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            // Refresh Button (always visible at the bottom)
             ElevatedButton.icon(
               onPressed: showOverallLoading ? null : _checkAndRequestPermission,
               icon: const Icon(Icons.refresh),
               label: const Text('Rafraîchir la position'),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],

@@ -12,21 +12,32 @@ class AssociationSelectorBloc extends Bloc<AssociationSelectorEvent, Association
   AssociationSelectorBloc(this.repository) : super(AssociationSelectorInitial()) {
     on<LoadAssociations>((event, emit) async {
       emit(AssociationSelectorLoading());
-      final list = await repository.fetchMemberships();
-      String? selected = await _storage.read(key: _selectedAssociationKey);
+      try {
+        print('📡 Chargement des associations...');
+        final list = await repository.fetchMemberships();
+        String? selected = await _storage.read(key: _selectedAssociationKey);
 
-      if (selected == null && list.isNotEmpty) {
-        selected = list.first['id'] as String;
-        await _storage.write(key: _selectedAssociationKey, value: selected);
+        if (selected == null && list.isNotEmpty) {
+          selected = list.first['id'] as String;
+          await _storage.write(key: _selectedAssociationKey, value: selected);
+        }
+
+        emit(AssociationSelectorLoaded(list, selected));
+        print('✅ Associations chargées : $list');
+      } catch (e) {
+        print('❌ Erreur lors du chargement des associations : $e');
+        emit(AssociationSelectorError(e.toString()));
       }
-
-      emit(AssociationSelectorLoaded(list, selected));
     });
 
     on<SelectAssociation>((event, emit) async {
-      await _storage.write(key: _selectedAssociationKey, value: event.id);
-      final list = await repository.fetchMemberships();
-      emit(AssociationSelectorLoaded(list, event.id));
+      try {
+        await _storage.write(key: _selectedAssociationKey, value: event.id);
+        final list = await repository.fetchMemberships();
+        emit(AssociationSelectorLoaded(list, event.id));
+      } catch (e) {
+        emit(AssociationSelectorError('Erreur lors de la sélection : $e'));
+      }
     });
   }
 

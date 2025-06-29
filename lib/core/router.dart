@@ -11,6 +11,7 @@ import '../features/auth/screens/login_screen.dart';
 import '../features/geo/screens/geo_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/stock/screens/stock_screen.dart';
+import '../splash_screen.dart';
 
 class AppRouter extends StatefulWidget {
   const AppRouter({super.key});
@@ -32,6 +33,10 @@ class _AppRouterState extends State<AppRouter> {
       initialLocation: '/login',
       refreshListenable: GoRouterRefreshStream(authBloc.stream),
       routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const SplashScreen(),
+        ),
         GoRoute(
           path: '/login',
           builder: (context, state) => const LoginScreen(),

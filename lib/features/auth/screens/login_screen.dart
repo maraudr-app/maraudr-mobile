@@ -60,24 +60,28 @@ class _LoginScreenState extends State<LoginScreen> {
                         controller: _emailController,
                         decoration: InputDecoration(
                           labelText: 'Email',
+                          labelStyle: TextStyle(color: Colors.black), // Darker label color
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: Colors.grey.shade200, // Light background for better contrast
                         ),
+                        style: TextStyle(color: Colors.black), // Text color
                       ),
                       const SizedBox(height: 16),
                       TextField(
                         controller: _passwordController,
                         decoration: InputDecoration(
                           labelText: 'Mot de passe',
+                          labelStyle: TextStyle(color: Colors.black), // Darker label color
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: Colors.grey.shade200, // Light background for better contrast
                         ),
+                        style: TextStyle(color: Colors.black), // Text color
                         obscureText: true,
                       ),
                       const SizedBox(height: 24),

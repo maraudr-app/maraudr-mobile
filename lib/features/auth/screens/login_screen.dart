@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -60,28 +62,28 @@ class _LoginScreenState extends State<LoginScreen> {
                         controller: _emailController,
                         decoration: InputDecoration(
                           labelText: 'Email',
-                          labelStyle: TextStyle(color: Colors.black), // Darker label color
+                          labelStyle: TextStyle(color: Colors.black),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: Colors.grey.shade200, // Light background for better contrast
+                          fillColor: Colors.grey.shade200,
                         ),
-                        style: TextStyle(color: Colors.black), // Text color
+                        style: TextStyle(color: Colors.black),
                       ),
                       const SizedBox(height: 16),
                       TextField(
                         controller: _passwordController,
                         decoration: InputDecoration(
                           labelText: 'Mot de passe',
-                          labelStyle: TextStyle(color: Colors.black), // Darker label color
+                          labelStyle: TextStyle(color: Colors.black),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: Colors.grey.shade200, // Light background for better contrast
+                          fillColor: Colors.grey.shade200,
                         ),
-                        style: TextStyle(color: Colors.black), // Text color
+                        style: TextStyle(color: Colors.black),
                         obscureText: true,
                       ),
                       const SizedBox(height: 24),
@@ -104,6 +106,31 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           );
                         },
+                      ),
+                      const SizedBox(height: 16),
+                      RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          text: 'En vous connectant vous acceptez notre ',
+                          style: theme.textTheme.bodyMedium?.copyWith(color: Colors.black),
+                          children: [
+                            TextSpan(
+                              text: 'politique de confidentialité',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.primary,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  final url = Uri.parse('https://maraudr.eu/rgpd');
+                                  if (await canLaunchUrl(url)) {
+                                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                                  }
+                                },
+                            ),
+                            TextSpan(text: '.'),
+                          ],
+                        ),
                       ),
                     ],
                   ),

@@ -33,8 +33,11 @@ class _StockScreenState extends State<StockScreen> {
 
     if (token == null || associationId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Token ou association manquant.")),
-      );
+        const SnackBar(
+          content: Text('Une erreur est survenue, veuillez réessayer'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),      );
       setState(() => _sending = false);
       return;
     }
@@ -57,17 +60,21 @@ class _StockScreenState extends State<StockScreen> {
         ),
       );
     } on DioException catch (e) {
-      String message = "Cet item est invalide ou n'est pas reconnu.";
       if (e.response?.data is Map && e.response?.data['message'] != null) {
-        message = e.response?.data['message'];
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+        const SnackBar(
+          content: Text('Une erreur est survenue, veuillez réessayer'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur inconnue : ${e.toString()}')),
-      );
+        const SnackBar(
+          content: Text('Une erreur est survenue, veuillez réessayer'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),      );
     }
 
     setState(() => _sending = false);

@@ -180,13 +180,21 @@ class _GeoScreenState extends State<GeoScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Position envoyée (status: ${response.statusCode})')),
+        const SnackBar(
+          content: Text('La position a bien été envoyée!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       _descriptionController.clear();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur d\'envoi : $e')),
+        const SnackBar(
+          content: Text('Une erreur est survenue, veuillez réessayer...'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       if (mounted) setState(() => _sending = false);

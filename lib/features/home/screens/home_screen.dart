@@ -97,14 +97,14 @@ class HomeScreen extends StatelessWidget {
                     childAspectRatio: isPortrait ? 3.2 : 2.8,
                     children: [
                       _ActionCard(
-                        label: 'Stock +',
-                        subtitle: 'Ajouter un article',
+                        label: 'Ajouter un article',
+                        subtitle: 'dans votre stock',
                         icon: LucideIcons.packagePlus,
                         onTap: () => context.go('/stock'),
                       ),
                       _ActionCard(
-                        label: 'Stock -',
-                        subtitle: 'Enlever un article',
+                        label: 'Enlever un article',
+                        subtitle: 'de votre stock',
                         icon: LucideIcons.packageMinus,
                         onTap: () => context.go('/stock/remove'),
                       ),

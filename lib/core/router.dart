@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maraudr_app/core/theme.dart';
 import 'package:maraudr_app/features/stock/screens/remove_stock_screen.dart';
+import '../features/association/bloc/association_selector_bloc.dart';
+import '../features/association/bloc/association_selector_event.dart';
 import '../features/auth/bloc/auth_bloc.dart';
 import '../features/auth/bloc/auth_state.dart';
 import '../features/auth/screens/login_screen.dart';
@@ -22,6 +24,7 @@ class AppRouter extends StatefulWidget {
 
 class _AppRouterState extends State<AppRouter> {
   late GoRouter _router;
+  bool _associationsLoaded = false;
 
   @override
   void initState() {
@@ -58,16 +61,26 @@ class _AppRouterState extends State<AppRouter> {
           builder: (context, state) => const RemoveStockScreen(),
         ),
       ],
-      redirect: (context, state) {
-        final authState = authBloc.state;
-        final loggingIn = state.matchedLocation == '/login';
+        redirect: (context, state) {
+          final authState = authBloc.state;
+          final loggingIn = state.matchedLocation == '/login';
 
-        print('🔁 Redirection GoRouter, état : ${authState.runtimeType}');
+          print('🔁 Redirection GoRouter, état : ${authState.runtimeType}');
 
-        if (authState is AuthInitial || authState is AuthLoading) return null;
-        if (authState is Authenticated) return loggingIn ? '/home' : null;
-        return loggingIn ? null : '/login';
-      },
+          if (authState is AuthInitial || authState is AuthLoading) return null;
+
+          if (authState is Authenticated && !_associationsLoaded) {
+            _associationsLoaded = true;
+            context.read<AssociationSelectorBloc>().add(LoadAssociations());
+            print('✅ LoadAssociations déclenché après authentification');
+          }
+
+          if (authState is Authenticated) {
+            return loggingIn ? '/home' : null;
+          }
+
+          return loggingIn ? null : '/login';
+        },
     );
   }
 

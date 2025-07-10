@@ -41,6 +41,12 @@ class HomeScreen extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator());
                 } else if (state is AssociationSelectorLoaded &&
                     state.associations.isNotEmpty) {
+                  // ✅ Vérification que selectedId est bien présent dans les items
+                  final validSelectedId = state.associations
+                      .any((a) => a['id'] == state.selectedId)
+                      ? state.selectedId
+                      : null;
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -49,28 +55,39 @@ class HomeScreen extends StatelessWidget {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: state.selectedId,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              isExpanded: true, // ✅ Pour forcer le champ à utiliser toute la largeur
+                              value: validSelectedId,
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                              ),
+                              items: state.associations.map((assoc) {
+                                return DropdownMenuItem<String>(
+                                  value: assoc['id'] as String,
+                                  child: Text(
+                                    assoc['name'] as String,
+                                    overflow: TextOverflow.ellipsis, // ✅ Texte trop long = …
+                                    maxLines: 1,
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  context
+                                      .read<AssociationSelectorBloc>()
+                                      .add(SelectAssociation(value));
+                                }
+                              },
+                            ),
                           ),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                        items: state.associations.map((assoc) {
-                          return DropdownMenuItem(
-                            value: assoc['id'] as String,
-                            child: Text(assoc['name'] as String),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            context
-                                .read<AssociationSelectorBloc>()
-                                .add(SelectAssociation(value));
-                          }
-                        },
+                        ],
                       ),
                     ],
                   );
@@ -83,6 +100,7 @@ class HomeScreen extends StatelessWidget {
                 return const SizedBox.shrink();
               },
             ),
+
             const SizedBox(height: 24),
 
             Expanded(
@@ -119,8 +137,9 @@ class HomeScreen extends StatelessWidget {
                         subtitle: 'Se déconnecter',
                         icon: LucideIcons.logOut,
                         color: Colors.redAccent,
-                        onTap: () =>
-                            context.read<AuthBloc>().add(AuthLogoutRequested()),
+                        onTap: () => context
+                            .read<AuthBloc>()
+                            .add(AuthLogoutRequested()),
                       ),
                     ],
                   );

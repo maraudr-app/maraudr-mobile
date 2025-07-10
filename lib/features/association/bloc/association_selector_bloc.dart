@@ -17,9 +17,13 @@ class AssociationSelectorBloc extends Bloc<AssociationSelectorEvent, Association
         final list = await repository.fetchMemberships();
         String? selected = await _storage.read(key: _selectedAssociationKey);
 
-        if (selected == null && list.isNotEmpty) {
-          selected = list.first['id'] as String;
-          await _storage.write(key: _selectedAssociationKey, value: selected);
+        final associationIds = list.map((e) => e['id'] as String).toList();
+
+        if (selected == null || !associationIds.contains(selected)) {
+          selected = list.isNotEmpty ? list.first['id'] as String : null;
+          if (selected != null) {
+            await _storage.write(key: _selectedAssociationKey, value: selected);
+          }
         }
 
         emit(AssociationSelectorLoaded(list, selected));

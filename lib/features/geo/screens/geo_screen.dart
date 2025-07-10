@@ -76,7 +76,8 @@ class _GeoScreenState extends State<GeoScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Permission refusée définitivement. Activez-la dans les réglages.')),
+            content: Text(
+                'Permission refusée définitivement. Activez-la dans les réglages.')),
       );
       setState(() => _loading = false);
       return;
@@ -86,29 +87,11 @@ class _GeoScreenState extends State<GeoScreen> {
   }
 
   Future<void> _getLocation() async {
-    _timeoutTimer?.cancel(); // just in case
+    _timeoutTimer?.cancel();
+
     _timeoutTimer = Timer(const Duration(seconds: 10), () {
       if (_position == null && mounted) {
-        setState(() {
-          _loading = false;
-        });
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Localisation impossible'),
-            content: const Text(
-                'Impossible de récupérer votre position.\nVous allez être redirigé vers le menu.'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  context.go('/home');
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
+        _safeRedirectToHomeWithAlert();
       }
     });
 
@@ -119,6 +102,7 @@ class _GeoScreenState extends State<GeoScreen> {
       _timeoutTimer?.cancel();
 
       if (!mounted) return;
+
       setState(() {
         _position = pos;
         _loading = false;
@@ -129,13 +113,42 @@ class _GeoScreenState extends State<GeoScreen> {
         15.0,
       );
     } catch (e) {
-      if (!mounted) return;
       _timeoutTimer?.cancel();
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur de localisation : $e')),
       );
+
       setState(() => _loading = false);
     }
+  }
+
+  void _safeRedirectToHomeWithAlert() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Localisation impossible'),
+        content: const Text(
+          'Impossible de récupérer votre position.\nVous allez être redirigé vers le menu.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+
+              Future.microtask(() {
+                if (mounted) {
+                  _timeoutTimer?.cancel();
+                  context.go('/home');
+                }
+              });
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _sendLocation() async {
@@ -173,7 +186,9 @@ class _GeoScreenState extends State<GeoScreen> {
           'associationId': associationId,
           'latitude': _position!.latitude,
           'longitude': _position!.longitude,
-          'notes': description.isNotEmpty ? description : 'Signalement depuis l\'app',
+          'notes': description.isNotEmpty
+              ? description
+              : 'Signalement depuis l\'app',
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
@@ -231,33 +246,36 @@ class _GeoScreenState extends State<GeoScreen> {
               child: showOverallLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _position == null
-                  ? const Center(child: Text('Position indisponible.'))
-                  : FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: initialCenter,
-                  initialZoom: 15.0,
-                  interactionOptions: const InteractionOptions(
-                    flags: InteractiveFlag.none,
-                  ),
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.yourcompany.maraudr_app',
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: initialCenter,
-                        width: 80,
-                        height: 80,
-                        child: const Icon(Icons.location_on, color: Colors.red, size: 40),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                      ? const Center(child: Text('Position indisponible.'))
+                      : FlutterMap(
+                          mapController: _mapController,
+                          options: MapOptions(
+                            initialCenter: initialCenter,
+                            initialZoom: 15.0,
+                            interactionOptions: const InteractionOptions(
+                              flags: InteractiveFlag.none,
+                            ),
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate:
+                                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              userAgentPackageName:
+                                  'com.yourcompany.maraudr_app',
+                            ),
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: initialCenter,
+                                  width: 80,
+                                  height: 80,
+                                  child: const Icon(Icons.location_on,
+                                      color: Colors.red, size: 40),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -265,7 +283,8 @@ class _GeoScreenState extends State<GeoScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Votre position actuelle:', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Votre position actuelle:',
+                        style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 10),
                     if (showOverallLoading)
                       const Center(child: CircularProgressIndicator())
@@ -273,10 +292,12 @@ class _GeoScreenState extends State<GeoScreen> {
                       Text('Latitude : ${_position!.latitude}'),
                       Text('Longitude : ${_position!.longitude}'),
                     ] else ...[
-                      const Text('Position non disponible.', style: TextStyle(fontStyle: FontStyle.italic)),
+                      const Text('Position non disponible.',
+                          style: TextStyle(fontStyle: FontStyle.italic)),
                     ],
                     const SizedBox(height: 30),
-                    Text('Ajouter une description (optionnel):', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Ajouter une description (optionnel):',
+                        style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 10),
                     TextField(
                       controller: _descriptionController,
@@ -284,7 +305,8 @@ class _GeoScreenState extends State<GeoScreen> {
                       maxLength: _maxDescriptionLength,
                       decoration: InputDecoration(
                         hintText: 'Ex: "Bénévole rencontré à ce point"',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         contentPadding: const EdgeInsets.all(12),
                       ),
                       keyboardType: TextInputType.multiline,
@@ -292,12 +314,15 @@ class _GeoScreenState extends State<GeoScreen> {
                     ),
                     const SizedBox(height: 30),
                     ElevatedButton.icon(
-                      onPressed: (showOverallLoading || _position == null) ? null : _sendLocation,
+                      onPressed: (showOverallLoading || _position == null)
+                          ? null
+                          : _sendLocation,
                       icon: const Icon(Icons.send),
                       label: const Text('Envoyer la localisation'),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ],
@@ -311,7 +336,8 @@ class _GeoScreenState extends State<GeoScreen> {
               label: const Text('Rafraîchir la position'),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],

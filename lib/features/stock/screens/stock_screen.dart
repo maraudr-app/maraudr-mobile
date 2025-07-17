@@ -106,6 +106,11 @@ class _StockScreenState extends State<StockScreen> {
                   final token = await storage.read(key: 'jwt_token');
 
                   await _sendToApi(_lastCode!, token);
+
+                  await Future.delayed(const Duration(seconds: 1));
+                  setState(() {
+                    _lastCode = null;
+                  });
                 }
               },
             ),

@@ -108,10 +108,18 @@ class _GeoScreenState extends State<GeoScreen> {
         _loading = false;
       });
 
-      _mapController.move(
-        LatLng(_position!.latitude, _position!.longitude),
-        15.0,
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          try {
+            _mapController.move(
+              LatLng(pos.latitude, pos.longitude),
+              15.0,
+            );
+          } catch (e) {
+            debugPrint('Erreur mapController.move : $e');
+          }
+        }
+      });
     } catch (e) {
       _timeoutTimer?.cancel();
       if (!mounted) return;
